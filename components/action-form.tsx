@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef } from "react";
 import { useFormStatus } from "react-dom";
+import { type ConfirmOptions, useConfirm } from "@/components/confirm-dialog";
 import type { ActionResult } from "@/lib/action-result";
 
 type Action = (prev: ActionResult, formData: FormData) => Promise<ActionResult>;
@@ -18,20 +19,36 @@ export function ActionForm({
   action: Action;
   children: React.ReactNode;
   className?: string;
-  /** Pergunta de confirmação antes de enviar. */
-  confirm?: string;
+  /** Confirmação (modal) antes de enviar. */
+  confirm?: ConfirmOptions | string;
   /** Campos ocultos enviados junto. */
   hidden?: Record<string, string>;
   /** Feedback compacto (para botões pequenos em listas). */
   inlineFeedback?: boolean;
 }) {
   const [state, formAction] = useActionState(action, undefined);
+  const ask = useConfirm();
+  const approved = useRef(false);
   return (
     <form
       action={formAction}
       className={className}
-      onSubmit={(e) => {
-        if (confirm && !window.confirm(confirm)) e.preventDefault();
+      onSubmit={async (e) => {
+        if (approved.current) {
+          approved.current = false; // já confirmado: deixa a action seguir
+          return;
+        }
+        // A confirmação pode vir do botão clicado (data-confirm) ou do formulário.
+        const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+        const fromButton = submitter?.dataset.confirm;
+        const options = fromButton ? (JSON.parse(fromButton) as ConfirmOptions) : confirm;
+        if (!options) return;
+        e.preventDefault();
+        const form = e.currentTarget;
+        if (await ask(options)) {
+          approved.current = true;
+          form.requestSubmit(submitter);
+        }
       }}
     >
       {hidden &&
@@ -70,8 +87,8 @@ export function SubmitButton({
   className?: string;
   name?: string;
   value?: string;
-  /** Pergunta de confirmação antes de enviar (por botão). */
-  confirm?: string;
+  /** Confirmação (modal) só para este botão. */
+  confirm?: ConfirmOptions | string;
 }) {
   const { pending } = useFormStatus();
   return (
@@ -81,9 +98,9 @@ export function SubmitButton({
       disabled={pending}
       name={name}
       value={value}
-      onClick={(e) => {
-        if (confirm && !window.confirm(confirm)) e.preventDefault();
-      }}
+      data-confirm={
+        confirm ? JSON.stringify(typeof confirm === "string" ? { title: confirm } : confirm) : undefined
+      }
     >
       {pending && <span className="loading loading-spinner loading-xs" />}
       {children}

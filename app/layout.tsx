@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
+import { ConfirmProvider } from "@/components/confirm-dialog";
 import { getSettings } from "@/lib/settings";
 import "./globals.css";
 
@@ -32,7 +33,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-full flex flex-col bg-base-200">{children}</body>
+      <body className="min-h-full flex flex-col bg-base-200">
+        <ConfirmProvider>{children}</ConfirmProvider>
+      </body>
     </html>
   );
 }

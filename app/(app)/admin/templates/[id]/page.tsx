@@ -28,7 +28,12 @@ export default async function EditTemplatePage({ params }: PageProps<"/admin/tem
       <ActionForm
         action={deleteTemplate}
         hidden={{ id: template.id }}
-        confirm="Excluir este modelo? As agendas já criadas não são afetadas."
+        confirm={{
+          title: "Excluir este modelo?",
+          message: "As agendas já criadas com ele não são afetadas.",
+          confirmLabel: "Excluir",
+          tone: "danger",
+        }}
       >
         <SubmitButton className="btn btn-ghost btn-sm text-error">Excluir modelo</SubmitButton>
       </ActionForm>

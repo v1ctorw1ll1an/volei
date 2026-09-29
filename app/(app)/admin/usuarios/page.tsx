@@ -100,7 +100,16 @@ export default async function UsersPage() {
                     <ActionForm
                       action={setUserActive}
                       hidden={{ id: u.id, active: String(!u.active) }}
-                      confirm={u.active ? `Desativar ${u.name}? A pessoa não conseguirá mais entrar.` : undefined}
+                      confirm={
+                        u.active
+                          ? {
+                              title: `Desativar ${u.name}?`,
+                              message: "A pessoa não conseguirá mais entrar. Dá para reativar quando quiser.",
+                              confirmLabel: "Desativar",
+                              tone: "danger",
+                            }
+                          : undefined
+                      }
                     >
                       <SubmitButton className={`btn btn-sm ${u.active ? "btn-ghost text-error" : "btn-success"}`}>
                         {u.active ? "Desativar" : "Reativar"}

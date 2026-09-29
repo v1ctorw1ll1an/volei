@@ -94,7 +94,12 @@ export default async function SessionPage({ params }: PageProps<"/agendas/[id]">
           <ActionForm
             action={removeSignup}
             hidden={{ signupId: s.id }}
-            confirm={`Remover ${s.user.name} da lista?`}
+            confirm={{
+              title: `Remover ${s.user.name}?`,
+              message: "A pessoa sai da lista desta agenda. Se houver lista de espera, o próximo sobe.",
+              confirmLabel: "Remover",
+              tone: "danger",
+            }}
             inlineFeedback
           >
             <SubmitButton className="btn btn-ghost btn-xs btn-square text-error">
@@ -191,7 +196,15 @@ export default async function SessionPage({ params }: PageProps<"/agendas/[id]">
                   <ActionForm
                     action={leaveSession}
                     hidden={sessionIdField}
-                    confirm="Sair da lista desta agenda?"
+                    confirm={{
+                      title: "Sair da lista?",
+                      message:
+                        mine.state === "in"
+                          ? "Sua vaga fica livre e o primeiro da lista de espera entra no seu lugar."
+                          : "Você perde seu lugar na lista de espera.",
+                      confirmLabel: "Sair da lista",
+                      tone: "danger",
+                    }}
                     className="flex flex-col gap-2"
                   >
                     <SubmitButton className="btn btn-outline btn-error btn-sm">Sair da lista</SubmitButton>
@@ -255,7 +268,11 @@ export default async function SessionPage({ params }: PageProps<"/agendas/[id]">
                   name="status"
                   value="CLOSED"
                   className="btn btn-sm btn-neutral"
-                  confirm={`Fechar a agenda? O valor por pessoa fica congelado em ${formatBRL(price)}.`}
+                  confirm={{
+                    title: "Fechar a agenda?",
+                    message: `As inscrições são encerradas e o valor por pessoa fica congelado em ${formatBRL(price)}.`,
+                    confirmLabel: "Fechar agenda",
+                  }}
                 >
                   Fechar agenda
                 </SubmitButton>
@@ -268,7 +285,12 @@ export default async function SessionPage({ params }: PageProps<"/agendas/[id]">
                   name="status"
                   value="CANCELED"
                   className="btn btn-sm btn-warning btn-outline"
-                  confirm="Cancelar esta agenda?"
+                  confirm={{
+                    title: "Cancelar esta agenda?",
+                    message: "O jogo aparece como cancelado para todos. Dá para reabrir depois.",
+                    confirmLabel: "Cancelar agenda",
+                    tone: "danger",
+                  }}
                 >
                   Cancelar agenda
                 </SubmitButton>
@@ -278,7 +300,12 @@ export default async function SessionPage({ params }: PageProps<"/agendas/[id]">
               <ActionForm
                 action={deleteSession}
                 hidden={{ id: session.id }}
-                confirm="Excluir a agenda e toda a lista? Isso não pode ser desfeito."
+                confirm={{
+                  title: "Excluir a agenda?",
+                  message: "A agenda e toda a lista (inclusive os pagamentos) serão apagadas. Isso não pode ser desfeito.",
+                  confirmLabel: "Excluir",
+                  tone: "danger",
+                }}
               >
                 <SubmitButton className="btn btn-sm btn-error btn-ghost">Excluir</SubmitButton>
               </ActionForm>
