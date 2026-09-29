@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SUPERADMIN
+  ADMIN
+  MEMBER
+}
+
+enum SessionStatus {
+  OPEN
+  CLOSED
+  CANCELED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PENDING
+  CONFIRMED
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  name               String
+  email              String   @unique
+  passwordHash       String
+  role               Role     @default(MEMBER)
+  mustChangePassword Boolean  @default(true)
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+
+  signups           Signup[]
+  confirmedSignups  Signup[]      @relation("ConfirmedBy")
+  createdSessions   GameSession[]
+}
+
+model SessionTemplate {
+  id              String   @id @default(cuid())
+  name            String
+  location        String
+  weekday         Int? // 0 = domingo … 6 = sábado
+  time            String? // "HH:MM"
+  capacity        Int?
+  courtPriceCents Int
+  notes           String   @default("")
+  createdAt       DateTime @default(now())
+
+  sessions GameSession[]
+}
+
+model GameSession {
+  id                       String        @id @default(cuid())
+  templateId               String?
+  template                 SessionTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  title                    String
+  location                 String
+  startsAt                 DateTime
+  capacity                 Int?
+  courtPriceCents          Int
+  notes                    String        @default("")
+  status                   SessionStatus @default(OPEN)
+  // Gravado ao fechar a sessão para o valor não mudar depois.
+  finalPricePerPersonCents Int?
+  createdById              String
+  createdBy                User          @relation(fields: [createdById], references: [id])
+  createdAt                DateTime      @default(now())
+
+  signups Signup[]
+
+  @@index([startsAt])
+}
+
+model Signup {
+  id            String        @id @default(cuid())
+  sessionId     String
+  session       GameSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime      @default(now())
+  // Ordem na fila (começa igual a createdAt; o admin reordena trocando valores).
+  sortKey       DateTime      @default(now())
+  paymentStatus PaymentStatus @default(UNPAID)
+  paidMarkedAt  DateTime?
+  confirmedById String?
+  confirmedBy   User?         @relation("ConfirmedBy", fields: [confirmedById], references: [id], onDelete: SetNull)
+  confirmedAt   DateTime?
+
+  @@unique([sessionId, userId])
+  @@index([sessionId, sortKey])
+}
+
+model AppSettings {
+  id         Int    @id @default(1)
+  clubName   String @default("Vôlei")
+  lightTheme String @default("light")
+  darkTheme  String @default("dark")
+}
