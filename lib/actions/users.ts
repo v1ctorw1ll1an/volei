@@ -3,25 +3,27 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { hashPassword, hasRole, requireRole } from "@/lib/auth";
+import { hashPassword, requireAuth } from "@/lib/auth";
 import { type ActionResult, toActionError, UserError } from "@/lib/action-result";
+import { emailSchema, fields, nameSchema, optionalWhatsappSchema } from "@/lib/schemas";
 
-const roleSchema = z.enum(["MEMBER", "ADMIN", "SUPERADMIN"]);
+// Gestão de pessoas: só superadmin.
+
+const roleSchema = z.enum(["MEMBER", "SUPERADMIN"]);
 const provisionalPassword = z.string().min(6, "A senha provisória precisa de ao menos 6 caracteres.");
-const emailSchema = z.string().trim().toLowerCase().pipe(z.email("E-mail inválido."));
-const nameSchema = z.string().trim().min(1, "Informe o nome.").max(80);
 
 const createSchema = z.object({
   name: nameSchema,
   email: emailSchema,
+  whatsapp: optionalWhatsappSchema,
   password: provisionalPassword,
   role: roleSchema,
 });
 
 export async function createUser(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   try {
-    await requireRole("SUPERADMIN");
-    const data = createSchema.parse(Object.fromEntries(formData));
+    await requireAuth({ superadmin: true });
+    const data = createSchema.parse(fields(formData, ["name", "email", "whatsapp", "password", "role"]));
     if (await db.user.findUnique({ where: { email: data.email } })) {
       throw new UserError("Já existe alguém com esse e-mail.");
     }
@@ -29,6 +31,7 @@ export async function createUser(_prev: ActionResult, formData: FormData): Promi
       data: {
         name: data.name,
         email: data.email,
+        whatsapp: data.whatsapp,
         role: data.role,
         passwordHash: await hashPassword(data.password),
         mustChangePassword: true,
@@ -45,13 +48,14 @@ const updateSchema = z.object({
   id: z.string().min(1),
   name: nameSchema,
   email: emailSchema,
+  whatsapp: optionalWhatsappSchema,
   role: roleSchema,
 });
 
 export async function updateUser(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   try {
-    const me = await requireRole("SUPERADMIN");
-    const data = updateSchema.parse(Object.fromEntries(formData));
+    const me = await requireAuth({ superadmin: true });
+    const data = updateSchema.parse(fields(formData, ["id", "name", "email", "whatsapp", "role"]));
     if (data.id === me.id && data.role !== "SUPERADMIN") {
       throw new UserError("Você não pode tirar o seu próprio papel de superadmin.");
     }
@@ -59,7 +63,7 @@ export async function updateUser(_prev: ActionResult, formData: FormData): Promi
     if (clash && clash.id !== data.id) throw new UserError("Já existe alguém com esse e-mail.");
     await db.user.update({
       where: { id: data.id },
-      data: { name: data.name, email: data.email, role: data.role },
+      data: { name: data.name, email: data.email, whatsapp: data.whatsapp, role: data.role },
     });
     revalidatePath("/", "layout");
     return { message: "Dados salvos." };
@@ -70,7 +74,7 @@ export async function updateUser(_prev: ActionResult, formData: FormData): Promi
 
 export async function setUserActive(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   try {
-    const me = await requireRole("SUPERADMIN");
+    const me = await requireAuth({ superadmin: true });
     const id = z.string().min(1).parse(formData.get("id"));
     const active = formData.get("active") === "true";
     if (id === me.id) throw new UserError("Você não pode desativar a si mesmo.");
@@ -86,14 +90,11 @@ const resetSchema = z.object({ id: z.string().min(1), password: provisionalPassw
 
 export async function resetPassword(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   try {
-    const me = await requireRole("ADMIN");
-    const data = resetSchema.parse(Object.fromEntries(formData));
+    const me = await requireAuth({ superadmin: true });
+    const data = resetSchema.parse(fields(formData, ["id", "password"]));
     if (data.id === me.id) throw new UserError("Para trocar a sua senha, use “Trocar senha”.");
     const target = await db.user.findUnique({ where: { id: data.id } });
     if (!target) throw new UserError("Usuário não encontrado.");
-    if (!hasRole(me, target.role)) {
-      throw new UserError("Só um superadmin pode redefinir a senha de outro superadmin.");
-    }
     await db.user.update({
       where: { id: data.id },
       data: { passwordHash: await hashPassword(data.password), mustChangePassword: true },

@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { hasRole, requireUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { getCurrentUser, isSuperadmin } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
-  const [user, { clubName }] = await Promise.all([requireUser(), getSettings()]);
-  const isAdmin = hasRole(user, "ADMIN");
-  const isSuper = hasRole(user, "SUPERADMIN");
+  // As checagens de senha provisória/cadastro incompleto ficam nas páginas (requireUser),
+  // que sabem para onde voltar depois (?next=); aqui só precisa do usuário para o menu.
+  const [user, { clubName }] = await Promise.all([getCurrentUser(), getSettings()]);
+  if (!user) redirect("/sair");
+  const isSuper = isSuperadmin(user);
 
   return (
     <>
@@ -24,19 +27,20 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
               <span aria-hidden>▾</span>
             </div>
             <ul tabIndex={0} className="dropdown-content menu bg-base-100 rounded-box z-10 w-56 p-2 shadow">
-              <li><Link href="/">Agendas</Link></li>
-              {isAdmin && (
+              <li><Link href="/">Meus eventos</Link></li>
+              <li><Link href="/eventos/novo">Novo evento</Link></li>
+              <li><Link href="/modelos">Meus modelos</Link></li>
+              <li><Link href="/?tutorial=criar-evento">Tutorial: criar evento</Link></li>
+              {isSuper && (
                 <>
-                  <li className="menu-title">Organização</li>
-                  <li><Link href="/admin/agendas/nova">Nova agenda</Link></li>
-                  <li><Link href="/admin/agendas">Todas as agendas</Link></li>
-                  <li><Link href="/admin/templates">Modelos de agenda</Link></li>
-                  <li><Link href="/?tutorial=criar-agenda">Tutorial: criar agenda</Link></li>
+                  <li className="menu-title">Administração</li>
+                  <li><Link href="/admin/eventos">Todos os eventos</Link></li>
                   <li><Link href="/admin/usuarios">Pessoas</Link></li>
+                  <li><Link href="/admin/config">Configurações</Link></li>
                 </>
               )}
-              {isSuper && <li><Link href="/admin/config">Configurações</Link></li>}
               <li className="menu-title">{user.email}</li>
+              <li><Link href="/perfil">Meu perfil</Link></li>
               <li><Link href="/trocar-senha">Trocar senha</Link></li>
               <li><a href="/sair">Sair</a></li>
             </ul>

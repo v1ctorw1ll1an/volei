@@ -12,7 +12,7 @@ type SessionLike<T extends SignupLike> = {
   signups: T[];
 };
 
-/** Resumo de uma sessão do ponto de vista de um usuário. */
+/** Resumo de um evento do ponto de vista de um usuário. */
 export function describeSession<T extends SignupLike>(session: SessionLike<T>, userId: string) {
   const { confirmed, waitlist } = splitQueue(session.signups, session.capacity);
   const price = sessionPricePerPerson(session, confirmed.length);
@@ -29,9 +29,9 @@ export function describeSession<T extends SignupLike>(session: SessionLike<T>, u
 }
 
 export const STATUS_LABEL: Record<SessionStatus, string> = {
-  OPEN: "Aberta",
-  CLOSED: "Fechada",
-  CANCELED: "Cancelada",
+  OPEN: "Aberto",
+  CLOSED: "Fechado",
+  CANCELED: "Cancelado",
 };
 
 export const STATUS_BADGE: Record<SessionStatus, string> = {
@@ -52,7 +52,7 @@ export const PAYMENT_BADGE: Record<PaymentStatus, string> = {
   CONFIRMED: "badge-success",
 };
 
-/** Uma sessão continua em "Próximas" até 6h depois do início. */
+/** Um evento continua em "Próximos" até 6h depois do início. */
 export function upcomingCutoff() {
   return new Date(Date.now() - 6 * 60 * 60 * 1000);
 }

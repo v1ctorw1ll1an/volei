@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { parseBRL } from "@/lib/format";
+import { normalizeWhatsapp } from "@/lib/whatsapp";
 
 /** Campo de formulário opcional: "" → null, senão inteiro dentro do intervalo. */
 export const optionalInt = (min: number, max: number, message: string) =>
@@ -22,3 +23,30 @@ export function fields<K extends string>(formData: FormData, keys: readonly K[])
     keys.map((k) => [k, String(formData.get(k) ?? "")]),
   ) as Record<K, string>;
 }
+
+export const nameSchema = z.string().trim().min(1, "Informe o nome.").max(80);
+
+export const emailSchema = z
+  .string({ message: "Informe o e-mail." })
+  .trim()
+  .toLowerCase()
+  .pipe(z.email("E-mail inválido."));
+
+export const passwordSchema = z
+  .string({ message: "Informe a senha." })
+  .min(6, "A senha precisa de ao menos 6 caracteres.");
+
+export const whatsappSchema = z
+  .string({ message: "Informe o WhatsApp." })
+  .transform((s) => normalizeWhatsapp(s))
+  .pipe(z.string({ message: "WhatsApp inválido. Use DDD + número, ex.: (11) 99999-8888." }));
+
+/** WhatsApp opcional (cadastro feito pelo superadmin): "" → null. */
+export const optionalWhatsappSchema = z
+  .string()
+  .transform((s, ctx) => {
+    if (s.trim() === "") return null;
+    const n = normalizeWhatsapp(s);
+    if (!n) ctx.addIssue({ code: "custom", message: "WhatsApp inválido. Use DDD + número." });
+    return n;
+  });

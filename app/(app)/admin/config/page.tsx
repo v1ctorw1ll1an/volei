@@ -3,6 +3,7 @@ import { saveSettings } from "@/lib/actions/settings";
 import { requireUser } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
 import { THEMES } from "@/lib/themes";
+import { formatWhatsapp } from "@/lib/whatsapp";
 
 export const metadata = { title: "Configurações" };
 
@@ -32,7 +33,7 @@ function ThemePicker({ name, label, value }: { name: string; label: string; valu
 }
 
 export default async function ConfigPage() {
-  await requireUser("SUPERADMIN");
+  await requireUser({ superadmin: true });
   const settings = await getSettings();
 
   return (
@@ -44,6 +45,18 @@ export default async function ConfigPage() {
             <label className="fieldset">
               <span className="fieldset-legend">Nome do clube</span>
               <input name="clubName" required defaultValue={settings.clubName} className="input w-full" />
+            </label>
+            <label className="fieldset">
+              <span className="fieldset-legend">WhatsApp de suporte (opcional)</span>
+              <input
+                name="supportWhatsapp"
+                type="tel"
+                inputMode="tel"
+                defaultValue={formatWhatsapp(settings.supportWhatsapp)}
+                placeholder="(11) 99999-8888"
+                className="input w-full"
+              />
+              <span className="label">Aparece no login para quem esqueceu a senha.</span>
             </label>
             <ThemePicker name="lightTheme" label="Tema claro" value={settings.lightTheme} />
             <ThemePicker name="darkTheme" label="Tema escuro" value={settings.darkTheme} />

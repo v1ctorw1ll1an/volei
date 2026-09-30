@@ -7,27 +7,33 @@ o app guarda só o status (não pago → aguardando → pago).
 **Stack:** Next.js 16 (App Router + Server Actions) · Prisma 7 + Postgres (Neon) · Tailwind v4 + daisyUI 5 ·
 auth própria (bcrypt + cookie JWT com `jose`).
 
-## Papéis
+## Como funciona
+
+- **Qualquer pessoa cria uma conta** (nome, e-mail, WhatsApp e senha) e **cria eventos**.
+- O evento é compartilhado **por link** (botões "Enviar no WhatsApp" / "Copiar link"). Quem abre o link sem
+  estar logado passa pelo login ou cadastro e volta direto para o evento.
+- **Meus eventos** mostra só os eventos que a pessoa criou ou dos quais participa; os demais são privados.
+  Quem abre o link vê data, local, valor e número de vagas, mas só vê **quem participa** depois de entrar na lista.
+- Só **quem criou o evento** (ou um superadmin) edita: dados, lista, pagamentos, fechar/cancelar/excluir.
+  O organizador vê o WhatsApp dos participantes, pode **remover** alguém (que pode voltar pelo link) ou
+  **remover e bloquear** (a pessoa não abre mais aquele evento; dá para desbloquear).
+- Vagas opcionais; quem passa da capacidade entra na **lista de espera** por ordem de chegada.
+- **Valor por pessoa** = valor da quadra ÷ confirmados (sem a espera), arredondado para cima no centavo;
+  congela ao **fechar** o evento.
+- "Paguei" do participante → organizador confirma. Os comprovantes continuam no WhatsApp.
+- Cada pessoa tem os próprios **modelos** de evento (setup reutilizável).
+- **Tutorial guiado** de como criar um evento no primeiro acesso (e no botão "Como criar?").
 
 | Papel | Pode |
 | --- | --- |
-| Membro | Entrar/sair de agendas abertas, marcar “paguei” |
-| Organizador (`ADMIN`) | Criar/editar agendas e modelos, mexer na lista, confirmar pagamentos, redefinir senhas |
-| Superadmin | Tudo acima + cadastrar pessoas, definir papéis, nome do clube e temas |
+| Usuário | Criar e organizar os próprios eventos; entrar em eventos pelo link |
+| Superadmin | Tudo acima + editar qualquer evento, ver todos os eventos, gerenciar pessoas (senha provisória, desativar), temas e nome do clube |
 
-Não há envio de e-mail: o superadmin cadastra cada pessoa com uma senha provisória (passada pelo
-WhatsApp) e o primeiro login obriga a troca. Esqueceu a senha? Um organizador define outra provisória.
+Esqueceu a senha? Só o superadmin redefine (senha provisória, com troca obrigatória no próximo login).
+O WhatsApp de suporte configurado em **Configurações** aparece na tela de login.
 
-## Regras
-
-- Vagas opcionais por agenda; quem passa da capacidade entra na **lista de espera** por ordem de chegada.
-  Se alguém sai, o primeiro da espera sobe automaticamente.
-- **Valor por pessoa** = valor da quadra ÷ confirmados (sem a espera), arredondado para cima no centavo.
-- Ao **fechar** a agenda o valor por pessoa congela. Reabrir e fechar de novo recalcula.
-- Datas são digitadas e exibidas no fuso de São Paulo.
-- Organizadores veem um **tutorial guiado** de como criar uma agenda no primeiro acesso (e pelo botão “Como criar?”).
-- Tema claro/escuro segue o aparelho (ou o botão ◐ na barra); o superadmin escolhe quais temas do daisyUI
-  são o “claro” e o “escuro” em **Configurações**.
+**Proteções:** campo-armadilha contra robôs no cadastro; limite de 5 cadastros/hora por IP e de erros de login
+(8 por e-mail e 20 por IP a cada 15 minutos).
 
 ## Rodando localmente
 
@@ -63,11 +69,14 @@ docker run -d --name volei-pg -e POSTGRES_PASSWORD=volei -e POSTGRES_DB=volei -p
 ```
 app/
   login/, trocar-senha/, sair/        # auth
-  (app)/page.tsx                      # próximas agendas
-  (app)/agendas/[id]/                 # lista, entrar/sair, paguei, controles do organizador
-  (app)/admin/{agendas,templates,usuarios,config}/
+  (app)/page.tsx                      # meus eventos
+  cadastro/, completar-cadastro/      # conta nova; WhatsApp para contas antigas
+  (app)/eventos/[id]/                 # evento: visitante / participante / organizador
+  (app)/eventos/novo, modelos/, perfil/
+  (app)/admin/{eventos,usuarios,config}/   # só superadmin
 lib/
-  auth.ts session.ts                  # senha, cookie, requireUser/requireRole
+  auth.ts session.ts                  # senha, cookie, requireUser/requireAuth/requireManager
+  rate-limit.ts whatsapp.ts           # limite de tentativas; normalização do WhatsApp
   queue.ts pricing.ts                 # confirmados × espera, divisão do valor
   actions/*.ts                        # server actions (todas checam papel no servidor)
   email.ts                            # Resend opcional (no-op sem RESEND_API_KEY)

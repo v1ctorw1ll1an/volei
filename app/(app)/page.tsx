@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { CreateAgendaTour } from "@/components/create-agenda-tour";
+import { CreateEventTour } from "@/components/create-event-tour";
 import { SessionCard } from "@/components/session-card";
-import { hasRole, requireUser } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { upcomingCutoff } from "@/lib/session-view";
 
@@ -13,15 +13,17 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const user = await requireUser();
   const { tutorial } = await searchParams;
   const cutoff = upcomingCutoff();
+  // "Meus eventos": os que eu criei e os de que participo. Os demais são privados.
+  const mine = { OR: [{ createdById: user.id }, { signups: { some: { userId: user.id } } }] };
 
   const [upcoming, recent] = await Promise.all([
     db.gameSession.findMany({
-      where: { startsAt: { gte: cutoff } },
+      where: { ...mine, startsAt: { gte: cutoff } },
       orderBy: { startsAt: "asc" },
       include: { signups: signupSelect },
     }),
     db.gameSession.findMany({
-      where: { startsAt: { lt: cutoff }, status: { not: "CANCELED" } },
+      where: { ...mine, startsAt: { lt: cutoff }, status: { not: "CANCELED" } },
       orderBy: { startsAt: "desc" },
       take: 5,
       include: { signups: signupSelect },
@@ -31,19 +33,24 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Próximas agendas</h1>
-          {hasRole(user, "ADMIN") && (
-            <div className="flex items-center gap-1">
-              <CreateAgendaTour part="inicio" autoStart={tutorial === "criar-agenda"} />
-              <Link href="/admin/agendas/nova" className="btn btn-primary btn-sm" data-tour="nova-agenda">
-                + Nova agenda
-              </Link>
-            </div>
-          )}
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-2xl font-bold">Meus eventos</h1>
+          <div className="flex items-center gap-1">
+            <CreateEventTour part="inicio" autoStart={tutorial === "criar-evento"} />
+            <Link href="/eventos/novo" className="btn btn-primary btn-sm" data-tour="novo-evento">
+              + Novo evento
+            </Link>
+          </div>
         </div>
         {upcoming.length === 0 ? (
-          <p className="text-base-content/70">Nenhuma agenda marcada por enquanto.</p>
+          <div className="card bg-base-100 shadow-sm">
+            <div className="card-body p-4 text-base-content/70">
+              <p>Nenhum evento marcado por enquanto.</p>
+              <p className="text-sm">
+                Crie um evento e compartilhe o link com a turma — ou abra o link que alguém te mandou.
+              </p>
+            </div>
+          </div>
         ) : (
           upcoming.map((s) => <SessionCard key={s.id} session={s} userId={user.id} />)
         )}

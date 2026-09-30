@@ -14,6 +14,7 @@ type Props = {
     courtPriceCents: number;
     finalPricePerPersonCents: number | null;
     status: SessionStatus;
+    createdById: string;
     signups: { userId: string; sortKey: Date; createdAt: Date; paymentStatus: PaymentStatus }[];
   };
 };
@@ -22,7 +23,7 @@ export function SessionCard({ session, userId }: Props) {
   const { confirmed, waitlist, price, mine } = describeSession(session, userId);
   return (
     <Link
-      href={`/agendas/${session.id}`}
+      href={`/eventos/${session.id}`}
       className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
     >
       <div className="card-body p-4 gap-2">
@@ -44,9 +45,10 @@ export function SessionCard({ session, userId }: Props) {
           {waitlist.length > 0 && <span className="badge badge-outline">{waitlist.length} na espera</span>}
           <span className="badge badge-outline">{formatBRL(price)} / pessoa</span>
         </div>
-        {mine && (
+        {(mine || session.createdById === userId) && (
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            {mine.state === "in" ? (
+            {session.createdById === userId && <span className="badge badge-accent">Você organiza</span>}
+            {!mine ? null : mine.state === "in" ? (
               <>
                 <span className="badge badge-primary">Você está dentro</span>
                 <span className={`badge ${PAYMENT_BADGE[mine.signup.paymentStatus]}`}>

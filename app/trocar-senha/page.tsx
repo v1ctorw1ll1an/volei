@@ -2,13 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { changePassword } from "@/lib/actions/auth";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, safeNext } from "@/lib/auth";
 
 export const metadata = { title: "Trocar senha" };
 
-export default async function ChangePasswordPage() {
+export default async function ChangePasswordPage({ searchParams }: PageProps<"/trocar-senha">) {
   const user = await getCurrentUser();
   if (!user) redirect("/sair");
+  const next = safeNext((await searchParams).next);
   return (
     <main className="flex flex-1 items-center justify-center p-4">
       <div className="card bg-base-100 w-full max-w-sm shadow-md">
@@ -21,7 +22,7 @@ export default async function ChangePasswordPage() {
           ) : (
             <p className="text-sm text-base-content/70">Escolha uma nova senha.</p>
           )}
-          <ActionForm action={changePassword} className="flex flex-col gap-3 mt-2">
+          <ActionForm action={changePassword} hidden={{ next: next ?? "" }} className="flex flex-col gap-3 mt-2">
             <input type="email" name="username" autoComplete="username" value={user.email} readOnly hidden />
             <label className="floating-label">
               <span>Senha atual</span>

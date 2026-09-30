@@ -21,7 +21,7 @@ export function SessionForm({ values, submitLabel }: { values: SessionFormValues
       className="flex flex-col gap-3"
     >
       <label className="fieldset" data-tour="titulo">
-        <span className="fieldset-legend">Título</span>
+        <span className="fieldset-legend">Nome do evento</span>
         <input name="title" required defaultValue={values.title} className="input w-full" placeholder="Vôlei de quinta" />
       </label>
       <label className="fieldset" data-tour="local">

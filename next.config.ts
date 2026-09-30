@@ -1,12 +1,19 @@
 import type { NextConfig } from "next";
 
+// "Sessões" viraram "agendas" e depois "eventos"; links antigos continuam funcionando.
+const OLD_EVENT_ROOTS = ["sessoes", "agendas"];
+
 const nextConfig: NextConfig = {
-  // "Sessões" passaram a se chamar "agendas"; links antigos continuam funcionando.
   async redirects() {
     return [
-      { source: "/sessoes/:path*", destination: "/agendas/:path*", permanent: true },
-      { source: "/admin/sessoes/:path*", destination: "/admin/agendas/:path*", permanent: true },
-      { source: "/admin/sessoes", destination: "/admin/agendas", permanent: true },
+      ...OLD_EVENT_ROOTS.flatMap((old) => [
+        { source: `/admin/${old}/nova`, destination: "/eventos/novo", permanent: true },
+        { source: `/admin/${old}/:id/editar`, destination: "/eventos/:id/editar", permanent: true },
+        { source: `/admin/${old}`, destination: "/admin/eventos", permanent: true },
+        { source: `/${old}/:path*`, destination: "/eventos/:path*", permanent: true },
+      ]),
+      { source: "/admin/templates/:path*", destination: "/modelos/:path*", permanent: true },
+      { source: "/admin/templates", destination: "/modelos", permanent: true },
     ];
   },
 };

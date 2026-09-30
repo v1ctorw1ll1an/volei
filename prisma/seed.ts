@@ -2,6 +2,7 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../lib/generated/prisma/client";
+import { normalizeWhatsapp } from "../lib/whatsapp";
 
 const db = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -11,6 +12,8 @@ async function main() {
   const email = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.SEED_ADMIN_PASSWORD;
   const name = process.env.SEED_ADMIN_NAME?.trim() || "Admin";
+  // Opcional: sem WhatsApp, o app pede para completar o cadastro no primeiro acesso.
+  const whatsapp = normalizeWhatsapp(process.env.SEED_ADMIN_WHATSAPP ?? "");
   if (!email || !password) {
     throw new Error("Defina SEED_ADMIN_EMAIL e SEED_ADMIN_PASSWORD.");
   }
@@ -26,6 +29,7 @@ async function main() {
     data: {
       name,
       email,
+      whatsapp,
       passwordHash: await bcrypt.hash(password, 10),
       role: "SUPERADMIN",
       mustChangePassword: true,

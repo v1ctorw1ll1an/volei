@@ -4,15 +4,17 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireRole } from "@/lib/auth";
+import { requireAuth, requireManager } from "@/lib/auth";
 import { type ActionResult, toActionError } from "@/lib/action-result";
 import { capacitySchema, fields, priceSchema } from "@/lib/schemas";
 import { parseLocalInput } from "@/lib/format";
 import { splitQueue } from "@/lib/queue";
 import { pricePerPersonCents } from "@/lib/pricing";
 
+// Eventos: qualquer pessoa cria; só o criador (ou superadmin) altera.
+
 const sessionSchema = z.object({
-  title: z.string().trim().min(1, "Dê um título à agenda.").max(80),
+  title: z.string().trim().min(1, "Dê um nome ao evento.").max(80),
   location: z.string().trim().min(1, "Informe o local.").max(120),
   startsAt: z
     .string()
@@ -37,17 +39,14 @@ async function currentPrice(sessionId: string) {
 export async function saveSession(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   let id = String(formData.get("id") ?? "");
   try {
-    const me = await requireRole("ADMIN");
-    const { courtPrice, ...rest } = sessionSchema.parse(
+    const { courtPrice, templateId, ...rest } = sessionSchema.parse(
       fields(formData, ["title", "location", "startsAt", "capacity", "courtPrice", "notes", "templateId"]),
     );
     const data = { ...rest, courtPriceCents: courtPrice };
     if (id) {
-      const session = await db.gameSession.update({
-        where: { id },
-        data: { ...data, templateId: undefined }, // o modelo de origem não muda na edição
-      });
-      // Editar uma agenda fechada recalcula o valor congelado.
+      await requireManager(id);
+      const session = await db.gameSession.update({ where: { id }, data });
+      // Editar um evento fechado recalcula o valor congelado.
       if (session.status === "CLOSED") {
         await db.gameSession.update({
           where: { id },
@@ -55,14 +54,21 @@ export async function saveSession(_prev: ActionResult, formData: FormData): Prom
         });
       }
     } else {
-      const session = await db.gameSession.create({ data: { ...data, createdById: me.id } });
+      const me = await requireAuth();
+      // Só guarda o modelo de origem se ele for da própria pessoa.
+      const template = templateId
+        ? await db.sessionTemplate.findFirst({ where: { id: templateId, ownerId: me.id } })
+        : null;
+      const session = await db.gameSession.create({
+        data: { ...data, templateId: template?.id ?? null, createdById: me.id },
+      });
       id = session.id;
     }
     revalidatePath("/", "layout");
   } catch (e) {
     return toActionError(e);
   }
-  redirect(`/agendas/${id}`);
+  redirect(`/eventos/${id}`);
 }
 
 const statusSchema = z.object({
@@ -72,12 +78,16 @@ const statusSchema = z.object({
 
 export async function setSessionStatus(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   try {
-    await requireRole("ADMIN");
     const { id, status } = statusSchema.parse(fields(formData, ["id", "status"]));
+    await requireManager(id);
     const finalPricePerPersonCents = status === "CLOSED" ? await currentPrice(id) : null;
     await db.gameSession.update({ where: { id }, data: { status, finalPricePerPersonCents } });
     revalidatePath("/", "layout");
-    const labels = { OPEN: "Agenda reaberta.", CLOSED: "Agenda fechada — valor congelado.", CANCELED: "Agenda cancelada." };
+    const labels = {
+      OPEN: "Evento reaberto.",
+      CLOSED: "Evento fechado — valor congelado.",
+      CANCELED: "Evento cancelado.",
+    };
     return { message: labels[status] };
   } catch (e) {
     return toActionError(e);
@@ -86,8 +96,8 @@ export async function setSessionStatus(_prev: ActionResult, formData: FormData):
 
 export async function deleteSession(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   try {
-    await requireRole("ADMIN");
     const id = z.string().min(1).parse(formData.get("id"));
+    await requireManager(id);
     await db.gameSession.delete({ where: { id } });
     revalidatePath("/", "layout");
   } catch (e) {

@@ -5,11 +5,11 @@ import "driver.js/dist/driver.css";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 
-// Tutorial guiado (tela escurecida + destaque) de como criar uma agenda.
-// Parte 1 roda na página inicial; parte 2 no formulário de nova agenda.
+// Tutorial guiado (tela escurecida + destaque) de como criar um evento.
+// Parte 1 roda na página inicial; parte 2 no formulário de novo evento.
 
-const DONE_KEY = "volei-tutorial-criar-agenda";
-const FORM_URL = "/admin/agendas/nova?tutorial=1";
+const DONE_KEY = "volei-tutorial-criar-evento";
+const FORM_URL = "/eventos/novo?tutorial=1";
 const TOTAL_STEPS = 10;
 
 type Part = "inicio" | "formulario";
@@ -19,18 +19,18 @@ function buildSteps(part: Part, goToForm: () => void): DriveStep[] {
     return [
       {
         popover: {
-          title: "Vamos criar uma agenda 🏐",
+          title: "Vamos criar um evento 🏐",
           description:
-            "Em poucos passos você marca um jogo e a turma já pode entrar na lista pelo app. " +
+            "Em poucos passos você marca um jogo e manda o link para a turma entrar na lista. " +
             "Use <b>Próximo</b> para avançar ou o <b>×</b> para sair do tutorial.",
         },
       },
       {
-        element: '[data-tour="nova-agenda"]',
+        element: '[data-tour="novo-evento"]',
         disableActiveInteraction: true,
         popover: {
           title: "Comece por aqui",
-          description: "O botão <b>+ Nova agenda</b> abre o formulário. Vamos até lá?",
+          description: "O botão <b>+ Novo evento</b> abre o formulário. Vamos até lá?",
           side: "bottom",
           align: "end",
           nextBtnText: "Abrir formulário →",
@@ -47,7 +47,7 @@ function buildSteps(part: Part, goToForm: () => void): DriveStep[] {
         title: "Use um modelo (opcional)",
         description:
           "Se o jogo se repete — toda quinta, por exemplo — escolha um modelo salvo: local, horário, " +
-          "vagas e valor já vêm preenchidos. Sem modelo, é só preencher à mão.",
+          "vagas e valor já vêm preenchidos. Sem modelo, é só preencher à mão (e dá para salvar um depois).",
         side: "bottom",
       },
     },
@@ -55,7 +55,7 @@ function buildSteps(part: Part, goToForm: () => void): DriveStep[] {
       element: '[data-tour="titulo"]',
       popover: {
         title: "Dê um nome",
-        description: "É o que a turma vê na lista de agendas. Ex.: <i>Vôlei de quinta</i>.",
+        description: "É o que a turma vê no link e na lista de eventos. Ex.: <i>Vôlei de quinta</i>.",
         side: "bottom",
       },
     },
@@ -95,7 +95,7 @@ function buildSteps(part: Part, goToForm: () => void): DriveStep[] {
       element: '[data-tour="observacoes"]',
       popover: {
         title: "Observações",
-        description: "Chave PIX, o que levar, regras do jogo… Aparece na página da agenda.",
+        description: "Chave PIX, o que levar, regras do jogo… Aparece na página do evento.",
         side: "top",
       },
     },
@@ -104,8 +104,8 @@ function buildSteps(part: Part, goToForm: () => void): DriveStep[] {
       popover: {
         title: "Pronto!",
         description:
-          "Toque em <b>Criar agenda</b>. Depois é só mandar o link no grupo do WhatsApp — cada um entra " +
-          "na lista e marca “paguei” pelo app.",
+          "Toque em <b>Criar evento</b>. Na página do evento, use <b>Compartilhar</b> para mandar o link " +
+          "no WhatsApp: quem abrir faz login ou cadastro, entra na lista e marca “paguei” pelo app.",
         side: "top",
         doneBtnText: "Entendi!",
       },
@@ -113,7 +113,7 @@ function buildSteps(part: Part, goToForm: () => void): DriveStep[] {
   ];
 }
 
-export function CreateAgendaTour({ part, autoStart = false }: { part: Part; autoStart?: boolean }) {
+export function CreateEventTour({ part, autoStart = false }: { part: Part; autoStart?: boolean }) {
   const router = useRouter();
   const tour = useRef<Driver | null>(null);
 
